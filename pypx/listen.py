@@ -17,14 +17,14 @@ import pprint
 
 class Listen():
     """docstring for Listen."""
-    def __init__(self, args):
-
+    def __init__(self, arg):
+        self.arg = arg
         self.__name__           = 'Listen'
 
-        self.tmp_directory = args['tmp_directory']
-        self.log_directory = args['log_directory']
-        self.data_directory = args['data_directory']
-        self.executable = args['executable']
+        self.tmp_directory = arg['tmp_directory']
+        self.log_directory = arg['log_directory']
+        self.data_directory = arg['output_dir']
+        self.executable = arg['executable']
 
         # Debugging control
         self.b_useDebug         = True
@@ -252,13 +252,29 @@ class Listen():
             raise NameError('File doesn\'t exist:' + image_path)
 
     def run(self):
+        # customize command to run storescp
+        command = self.executable
 
-        # start listening to incoming data
-        command = self.executable + ' -id -od "' + \
-          self.uuid_directory + '" -xcr "touch ' + \
-          self.uuid_directory + '/#c;touch ' + \
-          self.uuid_directory + '/#a" -pm -sp;'
-        subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
+        # Increase log level for debugging
+        if self.arg['verbose_count'] <= 10:
+            command += ' --log-level DEBUG'
+
+        # Support random directory creation
+        if self.arg['output_dir'].lower() == 'random':
+            command += ' -od "' + \
+                self.uuid_directory + '" -xcr "touch ' + \
+                self.uuid_directory + '/#c;touch ' + \
+                self.uuid_directory + '/#a" -pm -sp;'
+        else:
+            command += ' -od ' + self.arg['output_dir']
+
+        command += ' ' + self.arg['storescp_port']
+
+        if self.arg['verbose_count'] <= 20:
+            print(command)
+
+        output = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
+        pprint.pprint(vars(output))
 
         abs_files = [os.path.join(self.uuid_directory,f) for f in os.listdir(self.uuid_directory)]
         abs_dirs = [f for f in list(abs_files) if os.path.isdir(f)]
